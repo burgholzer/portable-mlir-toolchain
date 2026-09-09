@@ -12,6 +12,7 @@ releases may include breaking changes.
 
 ### Removed
 
+- 🍎 Drop support for x86 macOS ([#257]) ([**@denialhaag**])
 - 🔥 Remove Windows Debug support, including the `debug` action input and
   PowerShell `-use_debug` switch ([#256], [#258]) ([**@denialhaag**])
 
@@ -148,6 +149,7 @@ _This is the initial release of the `setup-mlir` project._
 <!-- PR links -->
 
 [#258]: https://github.com/munich-quantum-software/setup-mlir/pull/258
+[#257]: https://github.com/munich-quantum-software/setup-mlir/pull/257
 [#256]: https://github.com/munich-quantum-software/setup-mlir/pull/256
 [#230]: https://github.com/munich-quantum-software/setup-mlir/pull/230
 [#229]: https://github.com/munich-quantum-software/setup-mlir/pull/229
