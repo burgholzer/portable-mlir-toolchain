@@ -100,26 +100,6 @@ describe("setup-mlir Integration Tests", () => {
   }, 30000); // 30-second timeout for cleanup
 
   describe("Version Validation", () => {
-    it("should validate version tag format", () => {
-      const isVersionTag = RegExp("^\\d+\\.\\d+\\.\\d+$").test(testVersion);
-      expect(isVersionTag).toBe(true);
-    });
-
-    it("should validate commit hash format", () => {
-      const isCommitHash = RegExp("^[0-9a-f]{7,40}$", "i").test(
-        testVersionCommit,
-      );
-      expect(isCommitHash).toBe(true);
-    });
-
-    it("should reject invalid version format", () => {
-      const invalidVersion = "invalid-version-123";
-      const isVersionTag = RegExp("^\\d+\\.\\d+\\.\\d+$").test(invalidVersion);
-      const isCommitHash = RegExp("^[0-9a-f]{7,40}$", "i").test(invalidVersion);
-      expect(isVersionTag).toBe(false);
-      expect(isCommitHash).toBe(false);
-    });
-
     it("should reject non-existent version", async () => {
       const { getMLIRUrl } = await import("../src/utils/download.js");
 
@@ -128,32 +108,6 @@ describe("setup-mlir Integration Tests", () => {
   });
 
   describe("Platform and Architecture Detection", () => {
-    it("should detect current platform", () => {
-      const expectedPlatform =
-        process.platform === "linux"
-          ? "linux"
-          : process.platform === "darwin"
-            ? "macOS"
-            : process.platform === "win32"
-              ? "windows"
-              : null;
-
-      expect(expectedPlatform).not.toBeNull();
-    });
-
-    it("should detect current architecture", () => {
-      let expectedArch = "";
-      if (process.platform === "linux") {
-        expectedArch = process.arch === "x64" ? "x86_64" : "aarch64";
-      } else if (process.platform === "darwin") {
-        expectedArch = process.arch === "x64" ? "x86_64" : "arm64";
-      } else {
-        expectedArch = process.arch === "x64" ? "x86_64" : "aarch64";
-      }
-
-      expect(expectedArch).not.toBeNull();
-    });
-
     it("should handle explicit platform specification", async () => {
       const { getMLIRUrl } = await import("../src/utils/download.js");
 
@@ -446,7 +400,7 @@ describe("setup-mlir Integration Tests", () => {
       expect(zstdAsset.name).toMatch(/^zstd-.*\.(tar\.gz|zip)$/);
     });
 
-    it("should use latest release also when requested release doesn't have zstd binaries", async () => {
+    it("should resolve zstd for a commit-based LLVM version", async () => {
       const { getZstdUrl } = await import("../src/utils/download.js");
 
       const zstdAsset = await getZstdUrl(testVersionCommit, "host", "host");
