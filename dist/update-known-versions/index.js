@@ -36189,6 +36189,7 @@ function populateManifest(manifest, asset, release, zstdInfo) {
     manifest.push({
         architecture: architecture,
         asset_name: asset.name,
+        debug: false,
         download_url: asset.browser_download_url,
         platform: platform,
         release_url: release.html_url,

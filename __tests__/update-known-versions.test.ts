@@ -185,6 +185,10 @@ describe("Update Known Versions", () => {
       expect(manifest.map((entry) => entry.asset_name).sort()).toEqual(
         [...names].sort(),
       );
+      // Pinned actions use this predicate to select Release archives.
+      expect(manifest.filter((entry) => entry.debug === false)).toEqual(
+        manifest,
+      );
       for (const entry of manifest) {
         expect(entry.platform).toBe("windows");
         expect(["x86", "aarch64"]).toContain(entry.architecture);

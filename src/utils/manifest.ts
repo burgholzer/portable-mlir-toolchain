@@ -36,6 +36,8 @@ const README_LIST_END = "<!--- END: AUTO-GENERATED LIST. DO NOT EDIT. -->";
 export interface ManifestEntry {
   architecture: string;
   asset_name: string;
+  /** @deprecated Compatibility metadata for older pinned actions. */
+  debug: false;
   download_url: string;
   platform: string;
   release_url: string;
@@ -265,6 +267,7 @@ function populateManifest(
   manifest.push({
     architecture: architecture,
     asset_name: asset.name,
+    debug: false,
     download_url: asset.browser_download_url,
     platform: platform,
     release_url: release.html_url,
