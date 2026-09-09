@@ -32,8 +32,6 @@ import process from "node:process";
 // Create mock functions
 const mockGetInput =
   jest.fn<(name: string, options?: { required?: boolean }) => string>();
-const mockGetBooleanInput =
-  jest.fn<(name: string, options?: { required?: boolean }) => boolean>();
 const mockDebug = jest.fn<(message: string) => void>();
 const mockIsDebug = jest.fn<() => boolean>(() => false);
 const mockAddPath = jest.fn<(pathToAdd: string) => void>();
@@ -42,7 +40,6 @@ const mockSetFailed = jest.fn<(message: string) => void>();
 
 const mockCore = {
   getInput: mockGetInput,
-  getBooleanInput: mockGetBooleanInput,
   debug: mockDebug,
   isDebug: mockIsDebug,
   addPath: mockAddPath,
@@ -81,16 +78,6 @@ describe("setup-mlir Integration Tests", () => {
       if (name === "platform") return "host";
       if (name === "architecture") return "host";
       return "";
-    });
-
-    mockCore.getBooleanInput.mockImplementation((name: string) => {
-      if (name === "debug") {
-        return (
-          process.platform === "win32" &&
-          process.env.TEST_DEBUG_BUILD === "true"
-        );
-      }
-      return false;
     });
 
     mockCore.debug.mockImplementation(() => {});
@@ -134,11 +121,9 @@ describe("setup-mlir Integration Tests", () => {
     });
 
     it("should reject non-existent version", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
 
-      await expect(
-        getMLIRUrls("99.99.99", "host", "host", false),
-      ).rejects.toThrow();
+      await expect(getMLIRUrl("99.99.99", "host", "host")).rejects.toThrow();
     });
   });
 
@@ -170,18 +155,16 @@ describe("setup-mlir Integration Tests", () => {
     });
 
     it("should handle explicit platform specification", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
 
       // Test explicit linux platform
-      const assets = await getMLIRUrls(testVersion, "linux", "X86", false);
-      expect(assets).toHaveLength(1);
-      const asset = assets[0];
+      const asset = await getMLIRUrl(testVersion, "linux", "X86");
       expect(asset.name).toContain("linux");
       expect(asset.name).toContain("x86_64");
     });
 
     it("should handle explicit architecture specification", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
 
       // Test with current platform but explicit architecture
       const platform =
@@ -191,9 +174,7 @@ describe("setup-mlir Integration Tests", () => {
             ? "macOS"
             : "windows";
 
-      const assets = await getMLIRUrls(testVersion, platform, "X86", false);
-      expect(assets).toHaveLength(1);
-      const asset = assets[0];
+      const asset = await getMLIRUrl(testVersion, platform, "X86");
       expect(asset.url).toBeTruthy();
       expect(asset.name).toContain("x86_64");
     });
@@ -201,18 +182,53 @@ describe("setup-mlir Integration Tests", () => {
 
   describe("Asset Download", () => {
     it("should fetch download link for LLVM distribution", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
 
-      const assets = await getMLIRUrls(testVersion, "host", "host", false);
-      expect(assets).toHaveLength(1);
-      const asset = assets[0];
+      const asset = await getMLIRUrl(testVersion, "host", "host");
 
       expect(asset.url).toBeTruthy();
       expect(asset.name).toMatch(/^llvm-mlir_.*\.tar\.zst$/);
     });
 
+    it.each([
+      ["x86", "x86_64-pc-windows-msvc"],
+      ["aarch64", "aarch64-pc-windows-msvc"],
+    ])(
+      "should resolve the Windows %s archive",
+      async (architecture, target) => {
+        const { getMLIRUrl } = await import("../src/utils/download.js");
+        const asset = await getMLIRUrl(testVersion, "windows", architecture);
+
+        expect(asset.name).toBe(
+          `llvm-mlir_llvmorg-${testVersion}_${target}.tar.zst`,
+        );
+        expect(asset.url).toContain(asset.name);
+      },
+    );
+
+    it("should reject duplicate Release archives", async () => {
+      const { getMLIRUrl } = await import("../src/utils/download.js");
+      const entry = {
+        architecture: "x86",
+        platform: "windows",
+        version: testVersion,
+        asset_name: `llvm-mlir_llvmorg-${testVersion}_x86_64-pc-windows-msvc.tar.zst`,
+      };
+      const readFileSpy = jest
+        .spyOn(fs.promises, "readFile")
+        .mockResolvedValueOnce(JSON.stringify([entry, entry]));
+
+      try {
+        await expect(getMLIRUrl(testVersion, "windows", "x86")).rejects.toThrow(
+          "Expected exactly one",
+        );
+      } finally {
+        readFileSpy.mockRestore();
+      }
+    });
+
     it("should fall back to remote manifest when local file is missing", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
       const readFileSpy = jest
         .spyOn(fs.promises, "readFile")
         .mockRejectedValueOnce(
@@ -224,7 +240,6 @@ describe("setup-mlir Integration Tests", () => {
           architecture: "x86",
           asset_name:
             "llvm-mlir_llvmorg-22.1.0_x86_64-unknown-linux-gnu.tar.zst",
-          debug: false,
           download_url: "https://example.com/llvm.tar.zst",
           platform: "linux",
           release_url: "https://example.com/release",
@@ -251,9 +266,7 @@ describe("setup-mlir Integration Tests", () => {
       process.env.GITHUB_ACTION_REF = "v1.0.0";
 
       try {
-        const assets = await getMLIRUrls(testVersion, "linux", "X86", false);
-        expect(assets).toHaveLength(1);
-        const asset = assets[0];
+        const asset = await getMLIRUrl(testVersion, "linux", "X86");
         expect(asset.url).toBe("https://example.com/llvm.tar.zst");
         expect(fetchMock).toHaveBeenCalledWith(
           "https://raw.githubusercontent.com/munich-quantum-software/setup-mlir/main/version-manifest.json",
@@ -271,7 +284,7 @@ describe("setup-mlir Integration Tests", () => {
     });
 
     it("should fall back to remote manifest when local file doesn't know the version", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
       // A pinned ref ships a manifest that predates the requested version.
       const readFileSpy = jest
         .spyOn(fs.promises, "readFile")
@@ -282,7 +295,6 @@ describe("setup-mlir Integration Tests", () => {
           architecture: "x86",
           asset_name:
             "llvm-mlir_llvmorg-22.1.0_x86_64-unknown-linux-gnu.tar.zst",
-          debug: false,
           download_url: "https://example.com/llvm.tar.zst",
           platform: "linux",
           release_url: "https://example.com/release",
@@ -308,9 +320,8 @@ describe("setup-mlir Integration Tests", () => {
       process.env.GITHUB_ACTION_REF = "v1.0.0";
 
       try {
-        const assets = await getMLIRUrls(testVersion, "linux", "X86", false);
-        expect(assets).toHaveLength(1);
-        expect(assets[0].url).toBe("https://example.com/llvm.tar.zst");
+        const asset = await getMLIRUrl(testVersion, "linux", "X86");
+        expect(asset.url).toBe("https://example.com/llvm.tar.zst");
         expect(fetchMock).toHaveBeenCalledWith(
           "https://raw.githubusercontent.com/munich-quantum-software/setup-mlir/main/version-manifest.json",
           expect.objectContaining({
@@ -327,7 +338,7 @@ describe("setup-mlir Integration Tests", () => {
     });
 
     it("should fall back to default action repository when env is missing", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
       const readFileSpy = jest
         .spyOn(fs.promises, "readFile")
         .mockRejectedValueOnce(
@@ -338,7 +349,6 @@ describe("setup-mlir Integration Tests", () => {
         {
           architecture: "x86",
           asset_name: "llvm-mlir_llvmorg-22.1.0_linux_x86_64_X86.tar.zst",
-          debug: false,
           download_url: "https://example.com/llvm.tar.zst",
           platform: "linux",
           release_url: "https://example.com/release",
@@ -362,9 +372,7 @@ describe("setup-mlir Integration Tests", () => {
       delete process.env.GITHUB_ACTION_REPOSITORY;
 
       try {
-        const assets = await getMLIRUrls(testVersion, "linux", "X86", false);
-        expect(assets).toHaveLength(1);
-        const asset = assets[0];
+        const asset = await getMLIRUrl(testVersion, "linux", "X86");
         expect(asset.url).toBe("https://example.com/llvm.tar.zst");
         expect(fetchMock).toHaveBeenCalledWith(
           "https://raw.githubusercontent.com/munich-quantum-software/setup-mlir/main/version-manifest.json",
@@ -381,7 +389,7 @@ describe("setup-mlir Integration Tests", () => {
     });
 
     it("should surface a remote manifest fetch failure", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
       const readFileSpy = jest
         .spyOn(fs.promises, "readFile")
         .mockRejectedValueOnce(
@@ -402,9 +410,9 @@ describe("setup-mlir Integration Tests", () => {
         "munich-quantum-software/setup-mlir";
 
       try {
-        await expect(
-          getMLIRUrls(testVersion, "linux", "X86", false),
-        ).rejects.toThrow("Failed to fetch version manifest");
+        await expect(getMLIRUrl(testVersion, "linux", "X86")).rejects.toThrow(
+          "Failed to fetch version manifest",
+        );
       } finally {
         readFileSpy.mockRestore();
         global.fetch = originalFetch;
@@ -413,7 +421,7 @@ describe("setup-mlir Integration Tests", () => {
     });
 
     it("should surface non-ENOENT read errors", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
       const readFileSpy = jest
         .spyOn(fs.promises, "readFile")
         .mockRejectedValueOnce(
@@ -421,9 +429,9 @@ describe("setup-mlir Integration Tests", () => {
         );
 
       try {
-        await expect(
-          getMLIRUrls(testVersion, "host", "host", false),
-        ).rejects.toThrow("permission denied");
+        await expect(getMLIRUrl(testVersion, "host", "host")).rejects.toThrow(
+          "permission denied",
+        );
       } finally {
         readFileSpy.mockRestore();
       }
@@ -504,20 +512,6 @@ describe("setup-mlir Integration Tests", () => {
       }
     }, 900000); // 15-minute timeout
 
-    it("should reject debug flag on non-Windows platforms", async () => {
-      if (process.platform === "win32") {
-        return;
-      }
-
-      mockCore.getBooleanInput.mockImplementation((name: string) => {
-        return name === "debug";
-      });
-
-      await expect(run()).rejects.toThrow(
-        "Debug builds are only available on Windows",
-      );
-    });
-
     it("should reject invalid version", async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === "llvm-version") return "invalid-version-123";
@@ -540,16 +534,9 @@ describe("setup-mlir Integration Tests", () => {
             : "windows";
       const architecture = process.arch === "x64" ? "X86" : "AArch64";
 
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
 
-      const assets = await getMLIRUrls(
-        testVersion,
-        platform,
-        architecture,
-        false,
-      );
-      expect(assets).toHaveLength(1);
-      const asset = assets[0];
+      const asset = await getMLIRUrl(testVersion, platform, architecture);
 
       const expectedPlatform =
         platform === "linux"
@@ -573,19 +560,19 @@ describe("setup-mlir Integration Tests", () => {
     });
 
     it("should reject invalid platform", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
 
-      await expect(
-        getMLIRUrls(testVersion, "invalid", "X86", false),
-      ).rejects.toThrow("Invalid platform: invalid");
+      await expect(getMLIRUrl(testVersion, "invalid", "X86")).rejects.toThrow(
+        "Invalid platform: invalid",
+      );
     });
 
     it("should reject invalid architecture", async () => {
-      const { getMLIRUrls } = await import("../src/utils/download.js");
+      const { getMLIRUrl } = await import("../src/utils/download.js");
 
-      await expect(
-        getMLIRUrls(testVersion, "linux", "invalid", false),
-      ).rejects.toThrow("Invalid architecture: invalid");
+      await expect(getMLIRUrl(testVersion, "linux", "invalid")).rejects.toThrow(
+        "Invalid architecture: invalid",
+      );
     });
   });
 });

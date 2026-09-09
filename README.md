@@ -1,7 +1,8 @@
 # setup-mlir
 
 This repository provides an action for setting up MLIR in GitHub Actions and
-installation scripts for setting up MLIR locally.
+installation scripts for setting up MLIR locally. Only Release builds are
+supported.
 
 The MLIR binaries are built and distributed in the
 [`portable-mlir-toolchain`](https://github.com/munich-quantum-software/portable-mlir-toolchain/)
@@ -50,18 +51,6 @@ For more information on the available LLVM versions and commit hashes, see
 This extracts a pre-built MLIR installation, adds the binaries to `$PATH`, and
 defines `$LLVM_DIR` and `$MLIR_DIR`.
 
-### Debug Builds (Windows Only)
-
-On Windows, you can optionally install debug builds:
-
-```yaml
-- name: Set up MLIR (Debug)
-  uses: munich-quantum-software/setup-mlir@v1.4.2
-  with:
-    llvm-version: 22.1.8
-    debug: true
-```
-
 ## Installation Scripts
 
 If you want to use the pre-built MLIR installations locally, we also provide
@@ -86,13 +75,4 @@ On Windows, use the following PowerShell command:
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "& ([scriptblock]::Create((irm https://github.com/munich-quantum-software/setup-mlir/releases/latest/download/setup-mlir.ps1))) -llvm_version 22.1.0 -install_prefix /path/to/installation"
-```
-
-### Debug Builds (Windows Only)
-
-On Windows, you can optionally install debug builds by adding the `-use_debug`
-flag:
-
-```powershell
-powershell -ExecutionPolicy ByPass -c "& ([scriptblock]::Create((irm https://github.com/munich-quantum-software/setup-mlir/releases/latest/download/setup-mlir.ps1))) -llvm_version 22.1.0 -install_prefix /path/to/installation -use_debug"
 ```

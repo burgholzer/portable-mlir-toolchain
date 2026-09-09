@@ -36128,11 +36128,10 @@ function populateManifest(manifest, asset, release, zstdInfo) {
     const match_linux_aarch64 = asset.name.match(/llvm-mlir_(.+?)_aarch64-unknown-linux-gnu\.tar\.zst/i);
     const match_macos_x86 = asset.name.match(/llvm-mlir_(.+?)_x86_64-apple-darwin\.tar\.zst/i);
     const match_macos_aarch64 = asset.name.match(/llvm-mlir_(.+?)_arm64-apple-darwin\.tar\.zst/i);
-    const match_windows_x86 = asset.name.match(/llvm-mlir_(.+?)_x86_64-pc-windows-msvc(_debug)?\.tar\.zst/i);
-    const match_windows_aarch64 = asset.name.match(/llvm-mlir_(.+?)_aarch64-pc-windows-msvc(_debug)?\.tar\.zst/i);
-    const match_legacy = asset.name.match(/llvm-mlir_(.+?)_(.+?)_(.+)_(x86|aarch64)(_debug)?\.tar\.zst/i);
+    const match_windows_x86 = asset.name.match(/llvm-mlir_(.+?)_x86_64-pc-windows-msvc\.tar\.zst/i);
+    const match_windows_aarch64 = asset.name.match(/llvm-mlir_(.+?)_aarch64-pc-windows-msvc\.tar\.zst/i);
+    const match_legacy = asset.name.match(/llvm-mlir_(.+?)_(.+?)_(.+)_(x86|aarch64)\.tar\.zst/i);
     let architecture = "";
-    let debug = false;
     let platform = "";
     let zstdAssetNameKey = "";
     let zstdDownloadUrlKey = "";
@@ -36162,21 +36161,18 @@ function populateManifest(manifest, asset, release, zstdInfo) {
     }
     else if (match_windows_x86) {
         architecture = "x86";
-        debug = Boolean(match_windows_x86[2]);
         platform = "windows";
         zstdAssetNameKey = "asset_name_windows_x86";
         zstdDownloadUrlKey = "download_url_windows_x86";
     }
     else if (match_windows_aarch64) {
         architecture = "aarch64";
-        debug = Boolean(match_windows_aarch64[2]);
         platform = "windows";
         zstdAssetNameKey = "asset_name_windows_aarch64";
         zstdDownloadUrlKey = "download_url_windows_aarch64";
     }
     else if (match_legacy) {
         architecture = match_legacy[4].toLowerCase();
-        debug = Boolean(match_legacy[5]);
         platform = match_legacy[2].toLowerCase();
         zstdAssetNameKey = `asset_name_${platform}_${architecture}`;
         zstdDownloadUrlKey = `download_url_${platform}_${architecture}`;
@@ -36193,7 +36189,6 @@ function populateManifest(manifest, asset, release, zstdInfo) {
     manifest.push({
         architecture: architecture,
         asset_name: asset.name,
-        debug: debug,
         download_url: asset.browser_download_url,
         platform: platform,
         release_url: release.html_url,
@@ -36266,7 +36261,9 @@ async function updateManifest() {
             }
         }
         for (const asset of release.assets) {
-            if (asset.name.startsWith("llvm-mlir_")) {
+            if (asset.name.startsWith("llvm-mlir_") &&
+                asset.name.endsWith(".tar.zst") &&
+                !asset.name.includes("_debug")) {
                 try {
                     version = getVersionFromAssetName(asset.name);
                     if (versions.has(version)) {

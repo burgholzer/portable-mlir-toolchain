@@ -36,7 +36,6 @@ const README_LIST_END = "<!--- END: AUTO-GENERATED LIST. DO NOT EDIT. -->";
 export interface ManifestEntry {
   architecture: string;
   asset_name: string;
-  debug: boolean;
   download_url: string;
   platform: string;
   release_url: string;
@@ -202,17 +201,16 @@ function populateManifest(
     /llvm-mlir_(.+?)_arm64-apple-darwin\.tar\.zst/i,
   );
   const match_windows_x86 = asset.name.match(
-    /llvm-mlir_(.+?)_x86_64-pc-windows-msvc(_debug)?\.tar\.zst/i,
+    /llvm-mlir_(.+?)_x86_64-pc-windows-msvc\.tar\.zst/i,
   );
   const match_windows_aarch64 = asset.name.match(
-    /llvm-mlir_(.+?)_aarch64-pc-windows-msvc(_debug)?\.tar\.zst/i,
+    /llvm-mlir_(.+?)_aarch64-pc-windows-msvc\.tar\.zst/i,
   );
   const match_legacy = asset.name.match(
-    /llvm-mlir_(.+?)_(.+?)_(.+)_(x86|aarch64)(_debug)?\.tar\.zst/i,
+    /llvm-mlir_(.+?)_(.+?)_(.+)_(x86|aarch64)\.tar\.zst/i,
   );
 
   let architecture = "";
-  let debug = false;
   let platform = "";
   let zstdAssetNameKey = "";
   let zstdDownloadUrlKey = "";
@@ -239,19 +237,16 @@ function populateManifest(
     zstdDownloadUrlKey = "download_url_macos_aarch64";
   } else if (match_windows_x86) {
     architecture = "x86";
-    debug = Boolean(match_windows_x86[2]);
     platform = "windows";
     zstdAssetNameKey = "asset_name_windows_x86";
     zstdDownloadUrlKey = "download_url_windows_x86";
   } else if (match_windows_aarch64) {
     architecture = "aarch64";
-    debug = Boolean(match_windows_aarch64[2]);
     platform = "windows";
     zstdAssetNameKey = "asset_name_windows_aarch64";
     zstdDownloadUrlKey = "download_url_windows_aarch64";
   } else if (match_legacy) {
     architecture = match_legacy[4].toLowerCase();
-    debug = Boolean(match_legacy[5]);
     platform = match_legacy[2].toLowerCase();
     zstdAssetNameKey = `asset_name_${platform}_${architecture}`;
     zstdDownloadUrlKey = `download_url_${platform}_${architecture}`;
@@ -270,7 +265,6 @@ function populateManifest(
   manifest.push({
     architecture: architecture,
     asset_name: asset.name,
-    debug: debug,
     download_url: asset.browser_download_url,
     platform: platform,
     release_url: release.html_url,
@@ -351,7 +345,11 @@ export async function updateManifest(): Promise<void> {
       }
     }
     for (const asset of release.assets) {
-      if (asset.name.startsWith("llvm-mlir_")) {
+      if (
+        asset.name.startsWith("llvm-mlir_") &&
+        asset.name.endsWith(".tar.zst") &&
+        !asset.name.includes("_debug")
+      ) {
         try {
           version = getVersionFromAssetName(asset.name);
           if (versions.has(version)) {
