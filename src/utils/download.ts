@@ -33,17 +33,15 @@ const MANIFEST_FILE = join(__dirname, "..", "..", "version-manifest.json");
  * @param version The requested LLVM version
  * @param platform The platform
  * @param architecture The architecture
- * @param debug Whether to get a debug build
  * @param forceRemote Whether to force loading the manifest from the remote URL
  * @returns The manifest entry
  */
-async function getManifestEntries(
+async function getManifestEntry(
   version: string,
   platform: string,
   architecture: string,
-  debug: boolean,
   forceRemote: boolean = false,
-): Promise<ManifestEntry[]> {
+): Promise<ManifestEntry> {
   // Normalize inputs
   version = version.toLowerCase();
   platform = getPlatform(platform);
@@ -56,29 +54,30 @@ async function getManifestEntries(
       entry.version.startsWith(version) &&
       entry.platform === platform &&
       entry.architecture === architecture &&
-      entry.debug === debug,
+      entry.asset_name.endsWith(".tar.zst") &&
+      !entry.asset_name.includes("_debug"),
   );
 
   if (entries.length === 0 && !forceRemote) {
     core.debug(
       `No local manifest entries found for LLVM ${version}. Retrying with remote manifest.`,
     );
-    return await getManifestEntries(
-      version,
-      platform,
-      architecture,
-      debug,
-      true,
-    );
+    return await getManifestEntry(version, platform, architecture, true);
   }
 
   if (entries.length === 0) {
     throw new Error(
-      `No ${architecture} ${platform}${debug ? " (debug)" : ""} archive found for LLVM ${version}.`,
+      `No ${architecture} ${platform} archive found for LLVM ${version}.`,
     );
   }
 
-  return entries;
+  if (entries.length !== 1) {
+    throw new Error(
+      `Expected exactly one ${architecture} ${platform} archive for LLVM ${version}, but found ${entries.length}.`,
+    );
+  }
+
+  return entries[0];
 }
 
 /**
@@ -146,15 +145,10 @@ export async function getZstdUrl(
   platform: string,
   architecture: string,
 ): Promise<{ url: string; name: string }> {
-  const entries = await getManifestEntries(
-    version,
-    platform,
-    architecture,
-    false,
-  );
+  const entry = await getManifestEntry(version, platform, architecture);
   return {
-    url: entries[0].zstd_download_url,
-    name: entries[0].zstd_asset_name,
+    url: entry.zstd_download_url,
+    name: entry.zstd_asset_name,
   };
 }
 
@@ -163,23 +157,16 @@ export async function getZstdUrl(
  * @param version The requested LLVM version
  * @param platform The platform
  * @param architecture The architecture
- * @param debug Whether to get a debug build
  * @returns The download URL and the asset name
  */
-export async function getMLIRUrls(
+export async function getMLIRUrl(
   version: string,
   platform: string,
   architecture: string,
-  debug: boolean,
-): Promise<{ url: string; name: string }[]> {
-  const entries = await getManifestEntries(
-    version,
-    platform,
-    architecture,
-    debug,
-  );
-  return entries.map((entry) => ({
+): Promise<{ url: string; name: string }> {
+  const entry = await getManifestEntry(version, platform, architecture);
+  return {
     url: entry.download_url,
     name: entry.asset_name,
-  }));
+  };
 }

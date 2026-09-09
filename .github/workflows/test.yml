@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   test-installer-scripts:
-    name: Test installer script for version ${{ matrix.version }} on ${{ matrix.os }}${{ matrix.debug && ' (debug)' || '' }}
+    name: Test installer script for version ${{ matrix.version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -32,20 +32,6 @@ jobs:
             windows-11-arm,
           ]
         version: ["21.1.8", "22.1.0", "f8cb798"]
-        debug: [false]
-        include:
-          - os: windows-2025
-            version: "21.1.8"
-            debug: true
-          - os: windows-11-arm
-            version: "21.1.8"
-            debug: true
-          - os: windows-2025
-            version: "22.1.0"
-            debug: true
-          - os: windows-11-arm
-            version: "22.1.0"
-            debug: true
 
     steps:
       - name: Checkout repository
@@ -93,7 +79,7 @@ jobs:
         run: |
           $install_dir = Join-Path $env:TEMP "mlir-install"
 
-          & installation/setup-mlir.ps1 -llvm_version ${{ matrix.version }} -install_prefix $install_dir ${{ matrix.debug && '-use_debug' || '' }}
+          & installation/setup-mlir.ps1 -llvm_version ${{ matrix.version }} -install_prefix $install_dir
 
           # Verify installation
           if (-not (Test-Path "$install_dir\bin")) {
@@ -124,7 +110,7 @@ jobs:
           Write-Host "Installation test passed!"
 
   integration-tests:
-    name: Integration tests with coverage on ${{ matrix.os }}${{ matrix.debug && ' (debug)' || '' }}
+    name: Integration tests with coverage on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -141,12 +127,6 @@ jobs:
             windows-2025,
             windows-11-arm,
           ]
-        debug: [false]
-        include:
-          - os: windows-2025
-            debug: true
-          - os: windows-11-arm
-            debug: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -165,7 +145,6 @@ jobs:
       - name: Run integration tests with coverage
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TEST_DEBUG_BUILD: ${{ matrix.debug && 'true' || 'false' }}
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov

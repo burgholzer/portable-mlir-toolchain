@@ -103,7 +103,6 @@ describe("Update Known Versions", () => {
       // Verify all required fields exist
       expect(entry.architecture).toBeTruthy();
       expect(entry.asset_name).toBeTruthy();
-      expect(typeof entry.debug).toBe("boolean");
       expect(entry.download_url).toBeTruthy();
       expect(entry.platform).toBeTruthy();
       expect(entry.release_url).toBeTruthy();
@@ -138,7 +137,7 @@ describe("Update Known Versions", () => {
       );
 
       // Verify asset name matches expected pattern
-      expect(entry.asset_name).toMatch(/^llvm-mlir_.*\.tar\.zst/);
+      expect(entry.asset_name).toMatch(/^llvm-mlir_.*\.tar\.zst$/);
 
       // Verify zstd asset name matches expected pattern
       expect(entry.zstd_asset_name).toMatch(/^zstd-.*\.(zip|tar\.gz)/);
@@ -149,4 +148,49 @@ describe("Update Known Versions", () => {
       );
     }
   }, 600000); // 10-minute timeout
+
+  it("should generate manifest entries for both Windows architectures", async () => {
+    const names = ["x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"].map(
+      (target) => `llvm-mlir_llvmorg-22.1.0_${target}.tar.zst`,
+    );
+    const release = {
+      tag_name: "2026.03.24",
+      created_at: "2026-03-24T00:00:00Z",
+      html_url: "https://example.com/release",
+      assets: [
+        "zstd-1.5.7_x86_64-pc-windows-msvc.tar.gz",
+        "zstd-1.5.7_aarch64-pc-windows-msvc.tar.gz",
+        ...names,
+      ].map((name) => ({
+        name,
+        browser_download_url: `https://example.com/${name}`,
+      })),
+    };
+    jest.resetModules();
+    jest.unstable_mockModule("../src/utils/create-octokit.js", () => ({
+      createOctokit: () => ({
+        request: async (route: string) => ({
+          data: route.endsWith("/latest") ? release : [release],
+        }),
+      }),
+    }));
+
+    try {
+      const { updateManifest: updateOfflineManifest } =
+        await import("../src/utils/manifest.js");
+      await updateOfflineManifest();
+      const manifest: ManifestEntry[] = JSON.parse(
+        await actualFsModule.readFile(tempManifestPath, "utf-8"),
+      );
+      expect(manifest.map((entry) => entry.asset_name).sort()).toEqual(
+        [...names].sort(),
+      );
+      for (const entry of manifest) {
+        expect(entry.platform).toBe("windows");
+        expect(["x86", "aarch64"]).toContain(entry.architecture);
+      }
+    } finally {
+      jest.unstable_unmockModule("../src/utils/create-octokit.js");
+    }
+  });
 });

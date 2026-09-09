@@ -13,14 +13,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Usage: setup-mlir.ps1 -llvm_version <LLVM version> -install_prefix <installation directory> [-use_debug]
+# Usage: setup-mlir.ps1 -llvm_version <LLVM version> -install_prefix <installation directory>
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$llvm_version,
     [Parameter(Mandatory=$true)]
-    [string]$install_prefix,
-    [switch]$use_debug
+    [string]$install_prefix
 )
 
 $ErrorActionPreference = "Stop"
@@ -89,18 +88,18 @@ switch ($arch) {
         exit 1
     }
 }
-$debug = [bool]$use_debug
 $platform = "windows"
 
 $matching_entries = @($manifest_json | Where-Object {
     $_.platform -eq $platform -and
     $_.architecture -eq $architecture -and
-    $_.debug -eq $debug -and
+    $_.asset_name -like "*.tar.zst" -and
+    $_.asset_name -notlike "*_debug*" -and
     $_.version -like "${llvm_version}*"
 })
 
-if ($matching_entries.Count -eq 0) {
-    Write-Error "No release with LLVM $llvm_version found for Windows/${arch}$(if ($use_debug) { ' (debug)' } else { '' })."
+if ($matching_entries.Count -ne 1) {
+    Write-Error "Expected one release with LLVM $llvm_version for Windows/${arch}, but found $($matching_entries.Count)."
     exit 1
 }
 
@@ -137,41 +136,10 @@ if (-not (Test-Path $zstdBinPath)) {
 }
 
 # Download LLVM distribution
-if ($matching_entries.Count -eq 1) {
-    Write-Host "Downloading LLVM distribution..."
-    if (-not (Download-Asset -Url $matching_entries[0].download_url -OutputFile "llvm.tar.zst")) {
-        Write-Error "Download of LLVM distribution failed."
-        exit 1
-    }
-} else {
-    Write-Host "Downloading LLVM distribution in $($matching_entries.Count) parts..."
-    $parts = @()
-    foreach ($entry in $matching_entries) {
-        $part = $entry.asset_name
-        if (-not (Download-Asset -Url $entry.download_url -OutputFile $part)) {
-            Write-Error "Download of LLVM distribution failed."
-            exit 1
-        }
-        $parts += $part
-    }
-
-    Write-Host "Concatenating parts..."
-    $out = Join-Path (Get-Location) "llvm.tar.zst"
-    if (Test-Path $out) { Remove-Item $out -Force }
-    $target = [System.IO.File]::Open($out, [System.IO.FileMode]::CreateNew)
-    try {
-        foreach ($part in $parts) {
-            $in = [System.IO.File]::OpenRead($(Join-Path (Get-Location) $part))
-            try { $in.CopyTo($target) } finally { $in.Dispose() }
-        }
-    } finally {
-        $target.Dispose()
-    }
-
-    # Clean up
-    foreach ($part in $parts) {
-        Remove-Item $part -Force
-    }
+Write-Host "Downloading LLVM distribution..."
+if (-not (Download-Asset -Url $matching_entries[0].download_url -OutputFile "llvm.tar.zst")) {
+    Write-Error "Download of LLVM distribution failed."
+    exit 1
 }
 
 # Decompress and extract LLVM distribution
