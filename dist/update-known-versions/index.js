@@ -36243,7 +36243,7 @@ async function updateManifest() {
     const manifest = [];
     const zstdInfo = {};
     for (const release of releases) {
-        const assets = release.assets.filter((asset) => !/(?:x86_64-apple-darwin|macos_.*_x86)\./i.test(asset.name));
+        const assets = release.assets.filter((asset) => !/(?:x86_64-apple-darwin|macos_.*_x86)\.|_debug/i.test(asset.name));
         let version = undefined;
         for (const asset of assets) {
             if (asset.name.startsWith("zstd-")) {
@@ -36252,8 +36252,7 @@ async function updateManifest() {
         }
         for (const asset of assets) {
             if (asset.name.startsWith("llvm-mlir_") &&
-                asset.name.endsWith(".tar.zst") &&
-                !asset.name.includes("_debug")) {
+                asset.name.endsWith(".tar.zst")) {
                 try {
                     version = getVersionFromAssetName(asset.name);
                     if (versions.has(version)) {
