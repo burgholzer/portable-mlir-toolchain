@@ -127,10 +127,6 @@ download_file() {
   fi
 }
 
-# Fetch version-manifest.json once
-MANIFEST_URL="https://raw.githubusercontent.com/munich-quantum-software/setup-mlir/main/version-manifest.json"
-MANIFEST_JSON=$(fetch_manifest_json "$MANIFEST_URL")
-
 # Determine asset patterns based on platform/architecture
 if [[ "$PLATFORM" == "linux" && "$ARCH_SUFFIX" == "x86_64" ]]; then
   LLVM_PATTERN="_x86_64-unknown-linux-gnu\.tar\.zst"
@@ -140,10 +136,6 @@ elif [[ "$PLATFORM" == "linux" && "$ARCH_SUFFIX" == "arm64" ]]; then
   LLVM_PATTERN="_aarch64-unknown-linux-gnu\.tar\.zst"
   LEGACY_LLVM_PATTERN="_linux_aarch64_AArch64\.tar\.zst"
   ZSTD_PATTERN="zstd-[^/]*_aarch64-unknown-linux-gnu\.tar\.gz$"
-elif [[ "$PLATFORM" == "macos" && "$ARCH_SUFFIX" == "x86_64" ]]; then
-  LLVM_PATTERN="_x86_64-apple-darwin\.tar\.zst"
-  LEGACY_LLVM_PATTERN="_macos_x86_64_X86\.tar\.zst"
-  ZSTD_PATTERN="zstd-[^/]*_x86_64-apple-darwin\.tar\.gz$"
 elif [[ "$PLATFORM" == "macos" && "$ARCH_SUFFIX" == "arm64" ]]; then
   LLVM_PATTERN="_arm64-apple-darwin\.tar\.zst"
   LEGACY_LLVM_PATTERN="_macos_arm64_AArch64\.tar\.zst"
@@ -152,6 +144,10 @@ else
   echo "Unsupported platform/architecture combination: ${PLATFORM}/${ARCH_SUFFIX}" >&2
   exit 1
 fi
+
+# Fetch version-manifest.json once
+MANIFEST_URL="https://raw.githubusercontent.com/munich-quantum-software/setup-mlir/main/version-manifest.json"
+MANIFEST_JSON=$(fetch_manifest_json "$MANIFEST_URL")
 
 # Download zstd binary
 echo "Downloading zstd binary..."

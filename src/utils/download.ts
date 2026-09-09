@@ -46,6 +46,9 @@ async function getManifestEntry(
   version = version.toLowerCase();
   platform = getPlatform(platform);
   architecture = getArchitecture(architecture);
+  if (platform === "macos" && architecture !== "aarch64") {
+    throw new Error("macOS requires AArch64 architecture.");
+  }
 
   const manifest = await loadManifest(forceRemote);
 

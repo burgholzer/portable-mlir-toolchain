@@ -26,7 +26,7 @@ inputs:
     required: false
     default: "host"
   architecture:
-    description: "The architecture to install the MLIR toolchain for (either X86, AArch64, or host). Defaults to host."
+    description: "The architecture to install the MLIR toolchain for (either X86, AArch64, or host). macOS requires AArch64. Defaults to host."
     required: false
     default: "host"
 

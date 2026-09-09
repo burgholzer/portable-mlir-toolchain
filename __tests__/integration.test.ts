@@ -174,9 +174,9 @@ describe("setup-mlir Integration Tests", () => {
             ? "macOS"
             : "windows";
 
-      const asset = await getMLIRUrl(testVersion, platform, "X86");
+      const asset = await getMLIRUrl(testVersion, platform, "AArch64");
       expect(asset.url).toBeTruthy();
-      expect(asset.name).toContain("x86_64");
+      expect(asset.name).toContain(platform === "macOS" ? "arm64" : "aarch64");
     });
   });
 
@@ -564,6 +564,14 @@ describe("setup-mlir Integration Tests", () => {
 
       await expect(getMLIRUrl(testVersion, "invalid", "X86")).rejects.toThrow(
         "Invalid platform: invalid",
+      );
+    });
+
+    it("should require AArch64 for macOS", async () => {
+      const { getMLIRUrl } = await import("../src/utils/download.js");
+
+      await expect(getMLIRUrl(testVersion, "macOS", "X86")).rejects.toThrow(
+        "macOS requires AArch64 architecture.",
       );
     });
 

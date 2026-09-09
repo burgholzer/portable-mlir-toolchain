@@ -36054,7 +36054,6 @@ async function getReleases(octokit) {
 function populateZstdInfo(info, asset) {
     const match_linux_x86 = asset.name.match(/zstd-(.+?)_x86_64-unknown-linux-gnu\.tar\.gz/);
     const match_linux_aarch64 = asset.name.match(/zstd-(.+?)_aarch64-unknown-linux-gnu\.tar\.gz/);
-    const match_macos_x86 = asset.name.match(/zstd-(.+?)_x86_64-apple-darwin\.tar\.gz/);
     const match_macos_aarch64 = asset.name.match(/zstd-(.+?)_arm64-apple-darwin\.tar\.gz/);
     const match_windows_x86 = asset.name.match(/zstd-(.+?)_x86_64-pc-windows-msvc\.tar\.gz/);
     const match_windows_aarch64 = asset.name.match(/zstd-(.+?)_aarch64-pc-windows-msvc\.tar\.gz/);
@@ -36068,10 +36067,6 @@ function populateZstdInfo(info, asset) {
     else if (match_linux_aarch64) {
         assetNameKey = `asset_name_linux_aarch64`;
         downloadUrlKey = `download_url_linux_aarch64`;
-    }
-    else if (match_macos_x86) {
-        assetNameKey = `asset_name_macos_x86`;
-        downloadUrlKey = `download_url_macos_x86`;
     }
     else if (match_macos_aarch64) {
         assetNameKey = `asset_name_macos_aarch64`;
@@ -36126,7 +36121,6 @@ function getVersionFromAssetName(assetName) {
 function populateManifest(manifest, asset, release, zstdInfo) {
     const match_linux_x86 = asset.name.match(/llvm-mlir_(.+?)_x86_64-unknown-linux-gnu\.tar\.zst/i);
     const match_linux_aarch64 = asset.name.match(/llvm-mlir_(.+?)_aarch64-unknown-linux-gnu\.tar\.zst/i);
-    const match_macos_x86 = asset.name.match(/llvm-mlir_(.+?)_x86_64-apple-darwin\.tar\.zst/i);
     const match_macos_aarch64 = asset.name.match(/llvm-mlir_(.+?)_arm64-apple-darwin\.tar\.zst/i);
     const match_windows_x86 = asset.name.match(/llvm-mlir_(.+?)_x86_64-pc-windows-msvc\.tar\.zst/i);
     const match_windows_aarch64 = asset.name.match(/llvm-mlir_(.+?)_aarch64-pc-windows-msvc\.tar\.zst/i);
@@ -36146,12 +36140,6 @@ function populateManifest(manifest, asset, release, zstdInfo) {
         platform = "linux";
         zstdAssetNameKey = "asset_name_linux_aarch64";
         zstdDownloadUrlKey = "download_url_linux_aarch64";
-    }
-    else if (match_macos_x86) {
-        architecture = "x86";
-        platform = "macos";
-        zstdAssetNameKey = "asset_name_macos_x86";
-        zstdDownloadUrlKey = "download_url_macos_x86";
     }
     else if (match_macos_aarch64) {
         architecture = "aarch64";
@@ -36255,13 +36243,14 @@ async function updateManifest() {
     const manifest = [];
     const zstdInfo = {};
     for (const release of releases) {
+        const assets = release.assets.filter((asset) => !/(?:x86_64-apple-darwin|macos_.*_x86)\./i.test(asset.name));
         let version = undefined;
-        for (const asset of release.assets) {
+        for (const asset of assets) {
             if (asset.name.startsWith("zstd-")) {
                 populateZstdInfo(zstdInfo, asset);
             }
         }
-        for (const asset of release.assets) {
+        for (const asset of assets) {
             if (asset.name.startsWith("llvm-mlir_") &&
                 asset.name.endsWith(".tar.zst") &&
                 !asset.name.includes("_debug")) {

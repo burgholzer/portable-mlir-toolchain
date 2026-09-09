@@ -2,7 +2,7 @@
 
 This repository provides an action for setting up MLIR in GitHub Actions and
 installation scripts for setting up MLIR locally. Only Release builds are
-supported.
+supported. macOS requires Apple silicon (`arm64`).
 
 The MLIR binaries are built and distributed in the
 [`portable-mlir-toolchain`](https://github.com/munich-quantum-software/portable-mlir-toolchain/)

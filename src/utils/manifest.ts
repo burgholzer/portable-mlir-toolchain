@@ -53,13 +53,11 @@ export interface ManifestEntry {
 interface ZstdInfo {
   asset_name_linux_x86?: string;
   asset_name_linux_aarch64?: string;
-  asset_name_macos_x86?: string;
   asset_name_macos_aarch64?: string;
   asset_name_windows_x86?: string;
   asset_name_windows_aarch64?: string;
   download_url_linux_x86?: string;
   download_url_linux_aarch64?: string;
-  download_url_macos_x86?: string;
   download_url_macos_aarch64?: string;
   download_url_windows_x86?: string;
   download_url_windows_aarch64?: string;
@@ -108,9 +106,6 @@ function populateZstdInfo(info: ZstdInfo, asset: Asset): void {
   const match_linux_aarch64 = asset.name.match(
     /zstd-(.+?)_aarch64-unknown-linux-gnu\.tar\.gz/,
   );
-  const match_macos_x86 = asset.name.match(
-    /zstd-(.+?)_x86_64-apple-darwin\.tar\.gz/,
-  );
   const match_macos_aarch64 = asset.name.match(
     /zstd-(.+?)_arm64-apple-darwin\.tar\.gz/,
   );
@@ -132,9 +127,6 @@ function populateZstdInfo(info: ZstdInfo, asset: Asset): void {
   } else if (match_linux_aarch64) {
     assetNameKey = `asset_name_linux_aarch64`;
     downloadUrlKey = `download_url_linux_aarch64`;
-  } else if (match_macos_x86) {
-    assetNameKey = `asset_name_macos_x86`;
-    downloadUrlKey = `download_url_macos_x86`;
   } else if (match_macos_aarch64) {
     assetNameKey = `asset_name_macos_aarch64`;
     downloadUrlKey = `download_url_macos_aarch64`;
@@ -196,9 +188,6 @@ function populateManifest(
   const match_linux_aarch64 = asset.name.match(
     /llvm-mlir_(.+?)_aarch64-unknown-linux-gnu\.tar\.zst/i,
   );
-  const match_macos_x86 = asset.name.match(
-    /llvm-mlir_(.+?)_x86_64-apple-darwin\.tar\.zst/i,
-  );
   const match_macos_aarch64 = asset.name.match(
     /llvm-mlir_(.+?)_arm64-apple-darwin\.tar\.zst/i,
   );
@@ -227,11 +216,6 @@ function populateManifest(
     platform = "linux";
     zstdAssetNameKey = "asset_name_linux_aarch64";
     zstdDownloadUrlKey = "download_url_linux_aarch64";
-  } else if (match_macos_x86) {
-    architecture = "x86";
-    platform = "macos";
-    zstdAssetNameKey = "asset_name_macos_x86";
-    zstdDownloadUrlKey = "download_url_macos_x86";
   } else if (match_macos_aarch64) {
     architecture = "aarch64";
     platform = "macos";
@@ -341,13 +325,16 @@ export async function updateManifest(): Promise<void> {
   const manifest: ManifestEntry[] = [];
   const zstdInfo: ZstdInfo = {};
   for (const release of releases) {
+    const assets = release.assets.filter(
+      (asset) => !/(?:x86_64-apple-darwin|macos_.*_x86)\./i.test(asset.name),
+    );
     let version: string | undefined = undefined;
-    for (const asset of release.assets) {
+    for (const asset of assets) {
       if (asset.name.startsWith("zstd-")) {
         populateZstdInfo(zstdInfo, asset);
       }
     }
-    for (const asset of release.assets) {
+    for (const asset of assets) {
       if (
         asset.name.startsWith("llvm-mlir_") &&
         asset.name.endsWith(".tar.zst") &&

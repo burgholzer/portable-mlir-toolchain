@@ -124,7 +124,9 @@ describe("Update Known Versions", () => {
       expect(["linux", "macos", "windows"]).toContain(entry.platform);
 
       // Verify architecture is valid
-      expect(["x86", "aarch64"]).toContain(entry.architecture);
+      expect(
+        entry.platform === "macos" ? ["aarch64"] : ["x86", "aarch64"],
+      ).toContain(entry.architecture);
 
       // Verify download URL is from the correct repository
       expect(entry.download_url).toContain(
