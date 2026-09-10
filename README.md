@@ -1,3 +1,8 @@
+![OS](https://img.shields.io/badge/os-linux%20%7C%20macos%20%7C%20windows-blue?style=flat-square)
+[![License: Apache-2.0 WITH LLVM-exception](https://img.shields.io/badge/license-Apache--2.0%20WITH%20LLVM--exception-blue.svg?style=flat-square)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/munich-quantum-software/setup-mlir/test.yml?branch=main&style=flat-square&logo=github&label=ci)](https://github.com/munich-quantum-software/setup-mlir/actions/workflows/test.yml)
+[![codecov](https://img.shields.io/codecov/c/github/munich-quantum-software/setup-mlir?style=flat-square&logo=codecov)](https://codecov.io/gh/munich-quantum-software/setup-mlir)
+
 # setup-mlir
 
 This repository provides an action for setting up MLIR in GitHub Actions and
